@@ -142,3 +142,72 @@ def test_watch_needs_a_valid_job_and_a_slow_schedule(client):
     created = client.post("/api/watches", json={"kind": "shopee.report", "every_hours": 24})
     assert created.status_code == 201
     assert client.patch(f"/api/watches/{created.json()['id']}", json={"enabled": False}).json()["enabled"] is False
+
+
+def _offer(n, keyword, price, rate, **extra):
+    """A saved offer from a shop Reels Studio would approve, unless `extra` says otherwise."""
+    row = {
+        "external_id": str(n),
+        "name": f"SP {n}",
+        "keyword": keyword,
+        "price": Decimal(price),
+        "commission_rate": rate,
+    }
+    return row | {"shop_type": "mall", "rating": 4.9, "sold": 500} | extra
+
+
+def test_picks_rank_each_keyword_and_keep_reels_studio_rules_by_default(client, db):
+    store.save_products(
+        db,
+        "shopee",
+        [
+            _offer(1, "nồi chiên", 200_000, 0.03),
+            _offer(2, "nồi chiên", 100_000, 0.05, affiliate_link="https://s.shopee.vn/a"),
+            _offer(3, "nồi chiên", 150_000, 0.10),
+            _offer(4, "nồi chiên", 50_000, 0.20, shop_type="other"),
+            _offer(5, "nồi chiên", 60_000, 0.20, rating=4.5),
+            _offer(6, "nồi chiên", 70_000, 0.20, sold=10),
+            _offer(7, "máy xay", 300_000, 0.07),
+            _offer(8, "quạt", 300_000, None),
+        ],
+    )
+
+    picks = client.get("/api/products/picks", params={"keyword": ["nồi chiên", "máy xay", "quạt"], "top": 2}).json()
+    assert [(p["keyword"], [x["external_id"] for x in p["products"]]) for p in picks] == [
+        ("nồi chiên", ["3", "2"]),
+        ("máy xay", ["7"]),
+        ("quạt", []),
+    ]
+    best = picks[0]["products"][1]
+    assert (best["score"], best["affiliate_link"], Decimal(best["price"])) == (0.6429, "https://s.shopee.vn/a", 100_000)
+
+    anyone = client.get("/api/products/picks", params={"keyword": "nồi chiên", "approved_only": False, "top": 1})
+    assert anyone.json()[0]["products"][0]["external_id"] == "4"
+
+    cheap = client.get("/api/products/picks", params={"keyword": "nồi chiên", "price_weight": 1, "max_price": 150_000})
+    assert [x["external_id"] for x in cheap.json()[0]["products"]] == ["2", "3"]
+
+
+def test_picks_need_a_keyword(client):
+    assert client.get("/api/products/picks").status_code == 422
+    assert client.get("/api/products/picks", params={"keyword": "  "}).status_code == 422
+    assert client.get("/api/products/picks", params={"keyword": "a", "price_weight": 2}).status_code == 422
+
+
+def test_picks_job_params_are_cleaned(client):
+    job = client.post(
+        "/api/jobs", json={"kind": "shopee.picks", "params": {"keywords": [" nồi chiên ", "nồi chiên", "máy xay"]}}
+    )
+    assert job.status_code == 202
+    assert job.json()["params"] == {
+        "keywords": ["nồi chiên", "máy xay"],
+        "pages": 1,
+        "top": 3,
+        "price_weight": 0.5,
+        "approved_only": True,
+        "min_price": None,
+        "max_price": None,
+        "dump": False,
+    }
+    for bad in ({"keywords": []}, {"keywords": [""]}, {"keywords": ["a"] * 11}, {"keywords": ["a"], "top": 6}):
+        assert client.post("/api/jobs", json={"kind": "shopee.picks", "params": bad}).status_code == 422

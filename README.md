@@ -11,6 +11,7 @@ What it collects:
 | `shopee.offers` | Products from the Shopee Affiliate dashboard, with commission rate | Shopee Affiliate |
 | `shopee.links` | Affiliate short links for saved Shopee products (custom-link tool) | Shopee Affiliate |
 | `shopee.report` | Orders and commission from the conversion report | Shopee Affiliate |
+| `shopee.picks` | For a list of keywords: offers, the best few per keyword (cheap, high commission), their links | Shopee Affiliate |
 | `tiktok.trending` | Videos for a keyword, with views, likes, comments, shares | TikTok |
 | `tiktok.products` | TikTok Shop affiliate marketplace products, with commission rate | TikTok Shop creator |
 | `tiktok.report` | Affiliate orders and commission | TikTok Shop creator |
@@ -77,9 +78,28 @@ curl "localhost:8000/api/products?shop_type=mall&shop_type=preferred_plus&shop_t
   -H "X-API-Key: $API_KEY"
 ```
 
+### Best products for a list of keywords
+
+```bash
+# 1. Find them: search offers for each keyword, keep the best 3, make their affiliate links.
+curl -X POST localhost:8000/api/jobs -H "X-API-Key: $API_KEY" -H "Content-Type: application/json"   -d '{"kind": "shopee.picks", "params": {"keywords": ["nồi chiên không dầu", "máy xay sinh tố"], "top": 3}}'
+# 2. When the job is done, read them (any time later too):
+curl "localhost:8000/api/products/picks?keyword=nồi%20chiên%20không%20dầu&keyword=máy%20xay%20sinh%20tố&top=3"   -H "X-API-Key: $API_KEY"
+```
+
+Each keyword's saved offers are scored 0..1: `price_weight × cheapness + (1 − price_weight) ×
+commission`, where the cheapest offer has cheapness 1 and the highest commission rate has
+commission 1 (default `price_weight` 0.5; 1 ranks by price alone, 0 by commission alone). By
+default only offers Reels Studio would approve count (Mall or Preferred shop, 4.7 stars, 100
+sales); `approved_only=false` drops that. `min_price` / `max_price` keep accessories out of a
+search for the main product. Up to 10 keywords and `top` 5 per job (50 links, one custom-link
+run). A product belongs to the keyword it was last found with.
+
 Shopee products carry `shop_name` and `shop_type` (`mall`, `preferred_plus`, `preferred`,
 `other`: the values Reels Studio uses), read from the shop's badge flags. `shop_type` is empty
 when a page did not say; a later save never turns a known type back into empty.
+
+See [docs/PLAN.md](docs/PLAN.md) for where this service fits in the whole affiliate workflow.
 
 ## Commands
 
