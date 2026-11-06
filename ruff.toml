@@ -1,0 +1,20 @@
+line-length = 120
+target-version = "py312"
+extend-exclude = [".venv"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+ignore = [
+    "E501", # Vietnamese messages read better unbroken; 120 is a guide, not a gate
+]
+
+[lint.flake8-bugbear]
+# FastAPI declares parameters with these calls in default values; that is how the framework works.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Body"]
+
+[lint.isort]
+known-first-party = ["affiliate_data"]
+
+[lint.per-file-ignores]
+# conftest sets environment variables before importing the app, which reads them at import time.
+"tests/conftest.py" = ["E402"]

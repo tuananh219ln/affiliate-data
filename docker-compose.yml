@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: affiliate
+      POSTGRES_PASSWORD: affiliate
+      POSTGRES_DB: affiliate
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U affiliate"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["migrate"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://affiliate:affiliate@db:5432/affiliate
+    depends_on:
+      db: { condition: service_healthy }
+
+  api:
+    build: .
+    command: ["api"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://affiliate:affiliate@db:5432/affiliate
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  worker:
+    build: .
+    command: ["worker"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://affiliate:affiliate@db:5432/affiliate
+    volumes:
+      - data:/data
+    # Chromium needs more shared memory than Docker's 64 MB default.
+    shm_size: 1gb
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+volumes:
+  db:
+  data:

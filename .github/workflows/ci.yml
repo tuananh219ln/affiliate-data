@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: affiliate
+          POSTGRES_PASSWORD: affiliate
+          POSTGRES_DB: affiliate_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U affiliate" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://affiliate:affiliate@localhost:5432/affiliate_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check . && ruff format --check .
+      - run: alembic upgrade head && alembic downgrade base
+      - run: python -m pytest -q
