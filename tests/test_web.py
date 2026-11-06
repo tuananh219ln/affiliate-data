@@ -208,3 +208,18 @@ def test_passwords_are_hashed_with_a_salt():
     assert accounts.check_password("giong-nhau-123", one)
     assert not accounts.check_password("khac-123456", one)
     assert not accounts.check_password("x", "not-a-hash")
+
+
+def test_a_refused_form_opens_again_in_its_drawer_with_the_error(web, db):
+    _member(db, admin=True)
+    _sign_in(web)
+    assert 'class="drawer "' in web.get("/picks").text  # closed until asked for
+
+    refused = web.post("/picks", data={"platform": "shopee", "keywords": " "}).text
+    assert 'class="drawer open" id="pick-form"' in refused
+    assert refused.count("Tham số không hợp lệ") == 1  # inside the drawer, not again above the page
+
+    taken = web.post("/members", data={"email": "an@example.com", "name": "An", "password": PASSWORD}).text
+    assert 'class="drawer open" id="member-form"' in taken
+
+    assert 'class="drawer open" id="password-form"' in web.get("/account?open=password").text

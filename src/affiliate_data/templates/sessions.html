@@ -1,23 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Đăng nhập nền tảng{% endblock %}
 {% block content %}
-<h1>Đăng nhập nền tảng</h1>
-{% set labels = {'ok': 'Đang dùng được', 'needs_login': 'Cần đăng nhập lại', 'blocked': 'Bị chặn (captcha)', 'missing': 'Chưa đăng nhập'} %}
-<div class="table-wrap">
-<table>
-  <tr><th>Nền tảng</th><th>Trạng thái</th><th>Ghi chú</th><th>Cập nhật</th></tr>
-  {% for s in sessions %}
-  <tr>
-    <td>{{ 'Shopee' if s.platform == 'shopee' else 'TikTok' }}</td>
-    <td class="{{ 's-done' if s.status == 'ok' else 's-failed' }}">{{ labels.get(s.status, s.status) }}</td>
-    <td>{{ s.message or '' }}</td>
-    <td>{{ s.updated_at | when }}</td>
-  </tr>
-  {% endfor %}
-</table>
+{{ ui.page_header("Đăng nhập nền tảng", "Worker dùng phiên đăng nhập của một người để đọc Shopee và TikTok. Phiên được mã hoá và không bao giờ hiển thị lại; hệ thống không tự vượt captcha.") }}
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <tr><th>Nền tảng</th><th>Trạng thái</th><th>Ghi chú</th><th>Cập nhật</th></tr>
+    {% for s in sessions %}
+    <tr>
+      <td>{{ 'Shopee' if s.platform == 'shopee' else 'TikTok' }}</td>
+      <td>{{ ui.session_status(s.status) }}</td>
+      <td>{{ s.message or '' }}</td>
+      <td>{{ s.updated_at | when }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
 </div>
-<h2>Đăng nhập lại</h2>
-<p>Một người đăng nhập bằng tay trên máy của mình (captcha, OTP tự làm), rồi tải phiên lên:</p>
-<pre class="panel" style="overflow-x: auto;">python -m affiliate_data login shopee --upload {{ request.base_url }} --api-key &lt;API_KEY&gt;</pre>
-<p class="muted">Phiên đăng nhập được mã hoá và không bao giờ hiển thị lại. Hệ thống không tự vượt captcha.</p>
+<div class="card">
+  <div class="card-head"><h2>Đăng nhập lại</h2></div>
+  <div class="card-body">
+    <p style="margin-top: 0;">Một người đăng nhập bằng tay trên máy của mình (tự làm captcha và OTP), rồi tải phiên lên:</p>
+    <pre class="code">python -m affiliate_data login shopee --upload {{ request.base_url }} --api-key &lt;API_KEY&gt;</pre>
+    <p class="muted" style="margin-bottom: 0;">Với TikTok, đổi <code>shopee</code> thành <code>tiktok</code>.</p>
+  </div>
+</div>
 {% endblock %}

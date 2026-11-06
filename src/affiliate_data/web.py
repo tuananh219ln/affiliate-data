@@ -225,11 +225,11 @@ def start_picks(
         "max_price": int(max_price) if max_price.strip().isdigit() else None,
     }
     if kind is None:
-        return _picks_form(request, db, user, 422, error="Chọn Shopee hoặc TikTok.", form=form)
+        return _picks_form(request, db, user, 422, error="Chọn Shopee hoặc TikTok.", form=form, open_drawer="pick-form")
     try:
         job = jobs.enqueue(db, kind, params, created_by=user.id)
     except jobs.InvalidJob as error:
-        return _picks_form(request, db, user, 422, error=str(error), form=form)
+        return _picks_form(request, db, user, 422, error=str(error), form=form, open_drawer="pick-form")
     return _redirect(f"/picks/{job.id}")
 
 
@@ -314,7 +314,9 @@ def add_member(
     try:
         accounts.create(db, email, name, password, is_admin)
     except accounts.AccountError as error:
-        return _members_page(request, db, user, 422, error=str(error), form={"email": email, "name": name})
+        return _members_page(
+            request, db, user, 422, error=str(error), form={"email": email, "name": name}, open_drawer="member-form"
+        )
     return _redirect("/members?notice=member_added")
 
 
@@ -335,7 +337,9 @@ def set_member_active(
 
 @router.get("/account")
 def account_page(request: Request, user: Member) -> Response:
-    return _page(request, "account.html", user)
+    # The account menu's "Đổi mật khẩu" lands here with the drawer open.
+    open_drawer = "password-form" if request.query_params.get("open") == "password" else None
+    return _page(request, "account.html", user, open_drawer=open_drawer)
 
 
 @router.post("/account/password", dependencies=Posted)
@@ -347,11 +351,13 @@ def change_password(
     new: Annotated[str, Form()],
 ) -> Response:
     if not accounts.check_password(current, user.password_hash):
-        return _page(request, "account.html", user, 422, error="Mật khẩu hiện tại không đúng.")
+        return _page(
+            request, "account.html", user, 422, error="Mật khẩu hiện tại không đúng.", open_drawer="password-form"
+        )
     try:
         accounts.check_new_password(new)
     except accounts.AccountError as error:
-        return _page(request, "account.html", user, 422, error=str(error))
+        return _page(request, "account.html", user, 422, error=str(error), open_drawer="password-form")
     user.password_hash = accounts.hash_password(new)
     db.commit()
     # The old cookie no longer matches the password (other devices are signed out); give this one a new one.

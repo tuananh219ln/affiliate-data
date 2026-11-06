@@ -1,63 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Kết quả chọn sản phẩm{% endblock %}
 {% block content %}
-<p><a href="/picks">← Chọn sản phẩm</a></p>
-<h1>{{ 'Shopee' if platform == 'shopee' else 'TikTok Shop' }}: {{ job.params.keywords | join(', ') }}</h1>
-<p class="muted">
-  {{ job.created_at | when }}{% if creator %} · {{ creator }}{% endif %} ·
-  <span class="s-{{ job.status }}">{{ status_labels[job.status] }}</span>
-  {% if refresh %} · trang tự tải lại khi việc chạy xong{% endif %}
-</p>
-{% if job.status == 'failed' %}<div class="error">{{ job.error }}</div>{% endif %}
+<a class="back" href="/picks">{{ ui.icon('back') }}Chọn sản phẩm</a>
+<div class="page-header">
+  <div>
+    <h1>{{ job.params.keywords | join(', ') }}</h1>
+    <p class="description meta">
+      <span class="tag">{{ 'Shopee' if platform == 'shopee' else 'TikTok Shop' }}</span>
+      {{ ui.job_status(job.status) }}
+      <span>{{ job.created_at | when }}{% if creator %}, {{ creator }}{% endif %}</span>
+    </p>
+  </div>
+</div>
+{% if job.status == 'failed' %}<div class="alert alert-error">{{ job.error }}</div>{% endif %}
+{% if refresh %}<p class="explain">Trang tự tải lại khi việc chạy xong.</p>{% endif %}
 {% if job.status == 'done' and job.result %}
-<p class="muted">
-  Đã lưu {{ job.result.products }} sản phẩm, chọn {{ job.result.picked }}
-  {%- if job.result.links is defined %}, tạo {{ job.result.links }} link mới{% endif %}.
+<p class="explain">
+  Đã lưu {{ job.result.products }} sản phẩm, chọn {{ job.result.picked }}{% if job.result.links is defined %}, tạo {{ job.result.links }} link mới{% endif %}.
   {% if job.result.without_link %}{{ job.result.without_link }} sản phẩm chưa có link.{% endif %}
 </p>
 {% endif %}
 {% if platform == 'tiktok' %}
-<p class="muted">TikTok tạo link aff trong app: thêm các sản phẩm này vào showcase của bạn.</p>
+<p class="explain">TikTok tạo link affiliate trong app: thêm các sản phẩm này vào showcase của bạn.</p>
 {% endif %}
 
 {% for keyword, ranked in results %}
-<h2>{{ keyword }}</h2>
-{% if ranked %}
-<div class="table-wrap">
-<table>
-  <tr>
-    <th></th><th>Sản phẩm</th><th class="num">Giá</th><th class="num">Hoa hồng</th><th class="num">≈ Tiền/đơn</th>
-    <th class="num">Sao</th><th class="num">Đã bán</th><th class="num">Điểm</th><th>Link aff</th>
-  </tr>
-  {% for product, score in ranked %}
-  <tr>
-    <td>{% if product.image_url | web_url %}<img class="thumb" src="{{ product.image_url | web_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% endif %}</td>
-    <td class="product">
-      {% if product.url | web_url %}<a href="{{ product.url | web_url }}" target="_blank" rel="noopener noreferrer">{{ product.name }}</a>{% else %}{{ product.name }}{% endif %}
-      <div class="muted" style="font-size: 13px;">
-        {{ product.shop_name or '' }}
-        {% if product.shop_type %}<span class="tag">{{ {'mall': 'Mall', 'preferred_plus': 'Yêu thích+', 'preferred': 'Yêu thích', 'other': 'Shop thường'}[product.shop_type] }}</span>{% endif %}
-      </div>
-    </td>
-    <td class="num">{{ product.price | money }}</td>
-    <td class="num">{{ product.commission_rate | percent }}</td>
-    <td class="num">{{ product | per_order | money }}</td>
-    <td class="num">{{ product.rating if product.rating is not none else '—' }}</td>
-    <td class="num">{{ product.sold | number }}</td>
-    <td class="num">{{ '%.2f' | format(score) }}</td>
-    <td>
-      {% if product.affiliate_link %}
-      <div class="linkbox"><code>{{ product.affiliate_link }}</code><button type="button" data-copy="{{ product.affiliate_link }}">Copy</button></div>
-      {% else %}<span class="muted">Chưa có</span>{% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-</table>
+<div class="card">
+  <div class="card-head"><h2>{{ keyword }}</h2></div>
+  {% if ranked %}
+  <div class="table-wrap">
+  <table>
+    <tr>
+      <th></th><th>Sản phẩm</th><th class="num">Giá</th><th class="num">Hoa hồng</th><th class="num">≈ Tiền/đơn</th>
+      <th class="num">Sao</th><th class="num">Đã bán</th><th class="num">Điểm</th><th>Link affiliate</th>
+    </tr>
+    {% for product, score in ranked %}
+    <tr>
+      <td>{% if product.image_url | web_url %}<img class="thumb" src="{{ product.image_url | web_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="thumb">{{ ui.icon('image') }}</span>{% endif %}</td>
+      <td class="product">
+        {% if product.url | web_url %}<a href="{{ product.url | web_url }}" target="_blank" rel="noopener noreferrer">{{ product.name }}</a>{% else %}{{ product.name }}{% endif %}
+        <div class="sub">
+          {{ product.shop_name or '' }}
+          {% if product.shop_type %}<span class="tag">{{ {'mall': 'Mall', 'preferred_plus': 'Yêu thích+', 'preferred': 'Yêu thích', 'other': 'Shop thường'}[product.shop_type] }}</span>{% endif %}
+        </div>
+      </td>
+      <td class="num">{{ product.price | money }}</td>
+      <td class="num">{{ product.commission_rate | percent }}</td>
+      <td class="num">{{ product | per_order | money }}</td>
+      <td class="num">{{ product.rating if product.rating is not none else '—' }}</td>
+      <td class="num">{{ product.sold | number }}</td>
+      <td class="num">{{ '%.2f' | format(score) }}</td>
+      <td>
+        {% if product.affiliate_link %}
+        <div class="linkbox"><code>{{ product.affiliate_link }}</code><button class="btn btn-small" type="button" data-copy="{{ product.affiliate_link }}">Copy</button></div>
+        {% else %}<span class="muted">Chưa có</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% elif job.status in ('queued', 'running') %}
+  <div class="card-empty">Đang tìm…</div>
+  {% else %}
+  <div class="card-empty">Không có sản phẩm nào đạt điều kiện. Thử bỏ "Chỉ sản phẩm uy tín", nới khoảng giá, hoặc đổi từ khoá.</div>
+  {% endif %}
 </div>
-{% elif job.status in ('queued', 'running') %}
-<p class="muted">Đang tìm…</p>
-{% else %}
-<p class="muted">Không có sản phẩm nào đạt điều kiện. Thử bỏ "Chỉ sản phẩm uy tín", nới khoảng giá, hoặc đổi từ khoá.</p>
-{% endif %}
 {% endfor %}
 {% endblock %}
