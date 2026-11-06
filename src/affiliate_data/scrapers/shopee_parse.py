@@ -21,6 +21,37 @@ def product_url(shop_id: Any, item_id: Any) -> str:
     return f"{config.SHOPEE_BASE}/product/{shop_id}/{item_id}"
 
 
+_MALL_KEYS = ("is_official_shop", "isOfficialShop", "is_mall", "isMall")
+_PREFERRED_PLUS_KEYS = ("is_preferred_plus_seller", "isPreferredPlusSeller", "is_preferred_plus", "isPreferredPlus")
+_PREFERRED_KEYS = ("shopee_verified", "shopeeVerified", "is_preferred", "isPreferred", "is_preferred_seller")
+_TYPE_LABELS = {
+    "mall": "mall",
+    "official": "mall",
+    "preferred_plus": "preferred_plus",
+    "preferredplus": "preferred_plus",
+    "preferred": "preferred",
+    "normal": "other",
+}
+
+
+def shop_type(d: dict[str, Any]) -> str | None:
+    """mall | preferred_plus | preferred | other, from the shop's badge flags.
+
+    None when the record carries none of the flags: "unknown" must not read as an ordinary shop,
+    or a later save would downgrade a Mall seen elsewhere.
+    """
+    label = pick(d, "shop_type", "shopType")
+    if isinstance(label, str) and label.strip().lower().replace(" ", "_") in _TYPE_LABELS:
+        return _TYPE_LABELS[label.strip().lower().replace(" ", "_")]
+    flags = [(keys, pick(d, *keys)) for keys in (_MALL_KEYS, _PREFERRED_PLUS_KEYS, _PREFERRED_KEYS)]
+    if all(value is None for _, value in flags):
+        return None
+    for (_, value), kind in zip(flags, ("mall", "preferred_plus", "preferred"), strict=True):
+        if value is True or value == 1:
+            return kind
+    return "other"
+
+
 def _scaled_price(value: Any) -> Decimal | None:
     number = to_decimal(value)
     return None if number is None else (number / SEARCH_PRICE_SCALE).quantize(Decimal("0.01"))
@@ -37,6 +68,8 @@ def search_products(responses: list[Any], keyword: str | None = None) -> list[di
             {
                 "external_id": item_id,
                 "shop_id": shop_id,
+                "shop_name": text(pick(d, "shop_name", "shopName")),
+                "shop_type": shop_type(d),
                 "name": text(d["name"]),
                 "price": _scaled_price(pick(d, "price", "price_min")),
                 "original_price": _scaled_price(pick(d, "price_before_discount", "price_min_before_discount")),
@@ -71,6 +104,8 @@ def offer_products(responses: list[Any], keyword: str | None = None) -> list[dic
             {
                 "external_id": str(item_id),
                 "shop_id": str(shop_id) if shop_id is not None else None,
+                "shop_name": text(pick(d, "shopName", "shop_name")),
+                "shop_type": shop_type(d),
                 "name": text(name),
                 "price": price,
                 "image_url": image_url(pick(d, "imageUrl", "image_url", "image")),

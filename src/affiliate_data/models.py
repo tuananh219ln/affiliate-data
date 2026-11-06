@@ -32,6 +32,9 @@ class Product(Base):
     platform: Mapped[str] = mapped_column(String(20))
     external_id: Mapped[str] = mapped_column(String(64))
     shop_id: Mapped[str | None] = mapped_column(String(64))
+    shop_name: Mapped[str | None] = mapped_column(Text)
+    # Shopee: mall | preferred_plus | preferred | other (the same values Reels Studio uses). None when unknown.
+    shop_type: Mapped[str | None] = mapped_column(String(20))
     name: Mapped[str] = mapped_column(Text)
     price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     original_price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))

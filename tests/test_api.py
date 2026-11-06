@@ -67,6 +67,30 @@ def test_a_search_refresh_keeps_the_commission_an_offer_found(client, db):
     assert len(client.get("/api/products", params={"q": "nồi"}).json()) == 1
 
 
+def test_products_filter_like_the_reels_studio_approval_rules(client, db):
+    store.save_products(
+        db,
+        "shopee",
+        [
+            {"external_id": "1", "name": "Mall tốt", "shop_type": "mall", "rating": 4.9, "sold": 500},
+            {"external_id": "2", "name": "Shop thường", "shop_type": "other", "rating": 4.9, "sold": 500},
+            {"external_id": "3", "name": "Ít bán", "shop_type": "preferred", "rating": 4.8, "sold": 20},
+            {"external_id": "4", "name": "Sao thấp", "shop_type": "preferred_plus", "rating": 4.5, "sold": 900},
+        ],
+    )
+    # A later search row without badge information keeps the shop type already known.
+    store.save_products(db, "shopee", [{"external_id": "1", "name": "Mall tốt", "shop_type": None}])
+
+    params = {
+        "shop_type": ["mall", "preferred_plus", "preferred"],
+        "min_rating": 4.7,
+        "min_sold": 100,
+    }
+    products = client.get("/api/products", params=params).json()
+    assert [(p["external_id"], p["shop_type"]) for p in products] == [("1", "mall")]
+    assert client.get("/api/products", params={"shop_type": "vip"}).status_code == 422
+
+
 def test_links_only_for_shopee_products(client, db):
     store.save_products(db, "tiktok", [{"external_id": "1", "name": "Son", "url": "https://x"}])
     store.save_products(db, "shopee", [{"external_id": "1", "name": "Nồi", "url": "https://shopee.vn/product/1/1"}])
