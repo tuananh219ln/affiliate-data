@@ -1,0 +1,65 @@
+{# Shared pieces: icons, the page header, status text and the form drawer. #}
+
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+{%- if name == 'search' -%}<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+{%- elif name == 'list' -%}<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>
+{%- elif name == 'chart' -%}<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+{%- elif name == 'key' -%}<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/>
+{%- elif name == 'users' -%}<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>
+{%- elif name == 'menu' -%}<path d="M4 6h16M4 12h16M4 18h16"/>
+{%- elif name == 'more' -%}<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+{%- elif name == 'close' -%}<path d="M6 6l12 12M18 6 6 18"/>
+{%- elif name == 'plus' -%}<path d="M12 5v14M5 12h14"/>
+{%- elif name == 'back' -%}<path d="M15 18l-6-6 6-6"/>
+{%- elif name == 'image' -%}<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>
+{%- elif name == 'link' -%}<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{% macro logo_mark() -%}<span class="logo-mark">{{ icon('link') }}</span>{%- endmacro %}
+
+{# The same header on every page: title, the page's main action on the right, what the page is for. #}
+{% macro page_header(title, description=None, action=None, drawer=None) -%}
+<div class="page-header">
+  <div>
+    <h1>{{ title }}</h1>
+    {% if description %}<p class="description">{{ description }}</p>{% endif %}
+  </div>
+  {% if action and drawer %}<button class="btn btn-primary" type="button" data-open-drawer="{{ drawer }}">{{ icon('plus') }}{{ action }}</button>{% endif %}
+</div>
+{%- endmacro %}
+
+{% set JOB_STATUS = {
+  'queued': ('warn', 'Đang chờ'), 'running': ('run', 'Đang chạy'),
+  'done': ('done', 'Xong'), 'failed': ('bad', 'Lỗi'),
+} %}
+{% set SESSION_STATUS = {
+  'ok': ('ok', 'Đang dùng được'), 'needs_login': ('warn', 'Cần đăng nhập lại'),
+  'blocked': ('bad', 'Bị chặn (captcha)'), 'missing': ('idle', 'Chưa đăng nhập'),
+} %}
+
+{% macro status(kind, word) -%}<span class="status status-{{ kind }}">{{ word }}</span>{%- endmacro %}
+{% macro job_status(value) -%}{{ status(*JOB_STATUS.get(value, ('idle', value))) }}{%- endmacro %}
+{% macro session_status(value) -%}{{ status(*SESSION_STATUS.get(value, ('idle', value))) }}{%- endmacro %}
+
+{# A form in a drawer from the right, "Huỷ" and the main button at its foot. #}
+{% macro drawer(id, title, action, submit, open=False, error=None) -%}
+<aside class="drawer {{ 'open' if open }}" id="{{ id }}" aria-label="{{ title }}">
+  <form method="post" action="{{ action }}">
+    <div class="drawer-head">
+      <h2>{{ title }}</h2>
+      <button class="icon-button" type="button" data-close aria-label="Đóng">{{ icon('close') }}</button>
+    </div>
+    <div class="drawer-body">
+      {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+      {{ caller() }}
+    </div>
+    <div class="drawer-foot">
+      <button class="btn" type="button" data-close>Huỷ</button>
+      <button class="btn btn-primary" type="submit">{{ submit }}</button>
+    </div>
+  </form>
+</aside>
+{%- endmacro %}

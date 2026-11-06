@@ -1,35 +1,39 @@
 {% extends "base.html" %}
 {% block title %}Thành viên{% endblock %}
 {% block content %}
-<h1>Thành viên</h1>
-<div class="table-wrap">
-<table>
-  <tr><th>Tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr>
-  {% for person in people %}
-  <tr>
-    <td>{{ person.name }}</td>
-    <td>{{ person.email }}</td>
-    <td>{{ 'Quản trị' if person.is_admin else 'Thành viên' }}</td>
-    <td class="{{ 's-done' if person.active else 'muted' }}">{{ 'Đang dùng' if person.active else 'Đã tắt' }}</td>
-    <td>
-      {% if person.id != user.id %}
-      <form method="post" action="/members/{{ person.id }}/active">
-        {% if not person.active %}<input type="hidden" name="active" value="true">{% endif %}
-        <button type="submit">{{ 'Tắt' if person.active else 'Bật lại' }}</button>
-      </form>
-      {% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-</table>
+{{ ui.page_header("Thành viên", "Ai được đăng nhập vào Affiliate Data. Thành viên đã nghỉ được tắt chứ không xoá, để các việc họ đã chạy vẫn ghi tên họ.", "Thêm thành viên", "member-form") }}
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <tr><th>Tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr>
+    {% for person in people %}
+    <tr>
+      <td>{{ person.name }}</td>
+      <td>{{ person.email }}</td>
+      <td>{{ 'Quản trị' if person.is_admin else 'Thành viên' }}</td>
+      <td>{{ ui.status('ok', 'Đang dùng') if person.active else ui.status('idle', 'Đã tắt') }}</td>
+      <td class="num">
+        {% if person.id != user.id %}
+        <form method="post" action="/members/{{ person.id }}/active">
+          {% if not person.active %}<input type="hidden" name="active" value="true">{% endif %}
+          <button class="btn btn-small" type="submit">{{ 'Tắt' if person.active else 'Bật lại' }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
 </div>
 
-<h2>Thêm thành viên</h2>
-<form class="panel" method="post" action="/members" style="max-width: 520px;">
-  <p><label for="name">Tên</label><input id="name" name="name" value="{{ form.name if form else '' }}" required maxlength="100"></p>
-  <p><label for="email">Email</label><input id="email" name="email" type="email" value="{{ form.email if form else '' }}" required maxlength="200"></p>
-  <p><label for="password">Mật khẩu tạm (ít nhất 10 ký tự, gửi riêng cho họ và nhắc đổi)</label><input id="password" name="password" type="password" required minlength="10" autocomplete="new-password"></p>
-  <p><label class="row" style="color: var(--text);"><input type="checkbox" name="is_admin" value="true"> Quản trị (thêm, tắt thành viên)</label></p>
-  <button class="primary" type="submit">Thêm</button>
-</form>
+{% call ui.drawer("member-form", "Thêm thành viên", "/members", "Thêm", open_drawer == "member-form", error if open_drawer == "member-form") %}
+  <div class="field"><label for="name">Tên</label><input id="name" name="name" value="{{ form.name if form else '' }}" required maxlength="100"></div>
+  <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" value="{{ form.email if form else '' }}" required maxlength="200"></div>
+  <div class="field">
+    <label for="password">Mật khẩu tạm</label>
+    <input id="password" name="password" type="password" required minlength="10" autocomplete="new-password">
+    <div class="hint">Ít nhất 10 ký tự. Gửi riêng cho họ và nhắc đổi sau lần đăng nhập đầu.</div>
+  </div>
+  <label class="check"><input type="checkbox" name="is_admin" value="true"><span>Quản trị<br><span class="hint">Được thêm và tắt thành viên.</span></span></label>
+{% endcall %}
 {% endblock %}

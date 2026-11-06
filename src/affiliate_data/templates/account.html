@@ -1,13 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Tài khoản{% endblock %}
 {% block content %}
-<h1>Tài khoản</h1>
-<p>{{ user.name }} · {{ user.email }}{% if user.is_admin %} · Quản trị{% endif %}</p>
-<h2>Đổi mật khẩu</h2>
-<form class="panel" method="post" action="/account/password" style="max-width: 420px;">
-  <p><label for="current">Mật khẩu hiện tại</label><input id="current" name="current" type="password" required autocomplete="current-password"></p>
-  <p><label for="new">Mật khẩu mới (ít nhất 10 ký tự)</label><input id="new" name="new" type="password" required minlength="10" autocomplete="new-password"></p>
-  <button class="primary" type="submit">Đổi mật khẩu</button>
-  <p class="muted" style="font-size: 14px;">Đổi mật khẩu sẽ đăng xuất bạn trên các thiết bị khác.</p>
-</form>
+{{ ui.page_header("Tài khoản", None, "Đổi mật khẩu", "password-form") }}
+<div class="card">
+  <div class="card-body">
+    <div class="field"><label>Tên</label>{{ user.name }}</div>
+    <div class="field"><label>Email</label>{{ user.email }}</div>
+    <div class="field" style="margin-bottom: 0;"><label>Vai trò</label>{{ 'Quản trị' if user.is_admin else 'Thành viên' }}</div>
+  </div>
+</div>
+<form method="post" action="/logout"><button class="btn" type="submit">Đăng xuất</button></form>
+
+{% call ui.drawer("password-form", "Đổi mật khẩu", "/account/password", "Đổi mật khẩu", open_drawer == "password-form", error if open_drawer == "password-form") %}
+  <div class="field"><label for="current">Mật khẩu hiện tại</label><input id="current" name="current" type="password" required autocomplete="current-password"></div>
+  <div class="field">
+    <label for="new">Mật khẩu mới</label>
+    <input id="new" name="new" type="password" required minlength="10" autocomplete="new-password">
+    <div class="hint">Ít nhất 10 ký tự. Đổi mật khẩu sẽ đăng xuất bạn trên các thiết bị khác.</div>
+  </div>
+{% endcall %}
 {% endblock %}
