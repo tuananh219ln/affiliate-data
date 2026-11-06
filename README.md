@@ -15,6 +15,7 @@ What it collects:
 | `tiktok.trending` | Videos for a keyword, with views, likes, comments, shares | TikTok |
 | `tiktok.products` | TikTok Shop affiliate marketplace products, with commission rate | TikTok Shop creator |
 | `tiktok.report` | Affiliate orders and commission | TikTok Shop creator |
+| `tiktok.picks` | Like `shopee.picks` on the TikTok Shop marketplace, without links | TikTok Shop creator |
 
 ## How it works
 
@@ -94,6 +95,10 @@ default only offers Reels Studio would approve count (Mall or Preferred shop, 4.
 sales); `approved_only=false` drops that. `min_price` / `max_price` keep accessories out of a
 search for the main product. Up to 10 keywords and `top` 5 per job (50 links, one custom-link
 run). A product belongs to the keyword it was last found with.
+
+`tiktok.picks` and `GET /api/products/picks?platform=tiktok&keyword=...` do the same on TikTok
+Shop. TikTok has no shop badges, so its approval rule is the rating and sales only, and it makes
+no links: add the picked products to the showcase in the TikTok app.
 
 Shopee products carry `shop_name` and `shop_type` (`mall`, `preferred_plus`, `preferred`,
 `other`: the values Reels Studio uses), read from the shop's badge flags. `shop_type` is empty

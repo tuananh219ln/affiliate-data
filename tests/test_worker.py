@@ -130,3 +130,21 @@ def test_picks_job_searches_each_keyword_and_links_only_the_picks(db, monkeypatc
         db.execute(select(Product.external_id, Product.affiliate_link).where(Product.affiliate_link.is_not(None))).all()
     )
     assert linked == {"19": "https://s.shopee.vn/old", "11": "https://s.shopee.vn/11", "21": "https://s.shopee.vn/21"}
+
+
+def test_tiktok_picks_job_only_picks(db, monkeypatch):
+    def products(page, keyword, pages, captures):
+        return [
+            {"external_id": str(n), "name": f"{keyword} {n}", "keyword": keyword, "price": Decimal(price)}
+            | {"commission_rate": rate, "rating": 4.9, "sold": 500}
+            for n, price, rate in ((1, 100_000, 0.10), (2, 300_000, 0.02))
+            if keyword == "son"
+        ]
+
+    monkeypatch.setattr(tasks.tiktok, "products", products)
+    params = jobs.validate("tiktok.picks", {"keywords": ["son", "kem"], "top": 1})
+
+    result = tasks.HANDLERS["tiktok.picks"](db, None, params, [])
+
+    assert result == {"products": 2, "picked": 1, "no_pick": ["kem"]}
+    assert db.scalars(select(Product.platform)).all() == ["tiktok", "tiktok"]

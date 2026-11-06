@@ -13,7 +13,7 @@ picture of the whole workflow and of which part lives where; update it when a st
 
 | Step | What happens | Where | Status |
 | --- | --- | --- | --- |
-| 1. Pick products | From a list of keywords, the cheapest, best-paid products from trusted shops (`shopee.picks`, `GET /api/products/picks`) | affiliate-data | Shopee: built. TikTok Shop: to do |
+| 1. Pick products | From a list of keywords, the cheapest, best-paid products from trusted shops (`shopee.picks`, `tiktok.picks`, `GET /api/products/picks`) | affiliate-data | Built for Shopee and TikTok Shop |
 | 2. Affiliate links | Shopee: short link from the custom-link tool, made for each pick. TikTok Shop: the product is added to the creator's showcase in the app (no web tool) | affiliate-data / by hand | Shopee: built. TikTok: by hand |
 | 3. Make the video | Reels Studio imports the picks (name, price, images, link) and builds the video | Reels Studio | To do: "Import from Affiliate Data" |
 | 4. Post | Facebook Page: video with the link in the caption or first comment. TikTok: video with the product tagged (TikTok Shop) | Posting tool (official APIs) | To decide |
@@ -23,16 +23,15 @@ Trend research feeds step 1: `tiktok.trending` shows which keywords' videos get 
 
 ## Next steps, in order
 
-1. **Check the Shopee affiliate pages against a real account.** Run `shopee.picks` once with
-   `"dump": true`; fix the offer, shop-badge and short-link keys from the dumps (with tests).
+1. **Check the affiliate pages against real accounts.** Run `shopee.picks` and `tiktok.picks`
+   once each with `"dump": true`; fix the offer, shop-badge and short-link keys from the dumps
+   (with tests).
    Nothing past this is worth building until picks come back with prices, commission and links.
 2. **Reels Studio import.** A button on its Affiliate page that calls `GET /api/products/picks`
    and fills the product list.
-3. **TikTok Shop picks.** The same ranking for `tiktok.products` (commission rate is there; shop
-   type is not, so the approval rule needs a TikTok version).
-4. **Per-video tracking with Sub IDs.** Shopee custom links take Sub IDs; one link per video and
+3. **Per-video tracking with Sub IDs.** Shopee custom links take Sub IDs; one link per video and
    channel would let the report say which video sold. Needs the custom-link page's Sub ID field.
-5. **Posting.** Decide the tool: post by hand from Reels Studio's output, or through the
+4. **Posting.** Decide the tool: post by hand from Reels Studio's output, or through the
    official Facebook Graph API (Page videos/Reels) and TikTok Content Posting API, which need app
    review. Check each platform's current rules for links: TikTok limits links in captions, so
    Shopee links on TikTok usually go in the bio; TikTok Shop products are tagged in the app.
