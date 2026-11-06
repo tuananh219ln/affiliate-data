@@ -1,8 +1,8 @@
 """Job kinds, their parameters, and enqueueing. The worker (worker.py) runs them."""
 
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, StringConstraints, ValidationError, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,11 +26,36 @@ class ReportParams(BaseModel):
     dump: bool = False
 
 
+Keyword = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
+class PickParams(BaseModel):
+    """Search offers for each keyword, keep the best `top` of each, and make their affiliate links."""
+
+    # At most 10 x 5 = 50 links, what one custom-link job takes.
+    keywords: list[Keyword] = Field(min_length=1, max_length=10)
+    pages: int = Field(default=1, ge=1, le=config.MAX_PAGES)
+    top: int = Field(default=3, ge=1, le=5)
+    # 1 ranks by price only, 0 by commission rate only.
+    price_weight: float = Field(default=0.5, ge=0, le=1)
+    # Only products Reels Studio would approve: trusted shop, 4.7 stars or more, 100 sales or more.
+    approved_only: bool = True
+    min_price: int | None = Field(default=None, ge=0)
+    max_price: int | None = Field(default=None, ge=0)
+    dump: bool = False
+
+    @field_validator("keywords")
+    @classmethod
+    def _distinct(cls, keywords: list[str]) -> list[str]:
+        return list(dict.fromkeys(keywords))
+
+
 KINDS: dict[str, type[BaseModel]] = {
     "shopee.search": KeywordParams,
     "shopee.offers": KeywordParams,
     "shopee.links": LinkParams,
     "shopee.report": ReportParams,
+    "shopee.picks": PickParams,
     "tiktok.trending": KeywordParams,
     "tiktok.products": KeywordParams,
     "tiktok.report": ReportParams,
@@ -41,6 +66,7 @@ KIND_LABELS = {
     "shopee.offers": "Sản phẩm + hoa hồng Shopee Affiliate",
     "shopee.links": "Tạo link affiliate Shopee",
     "shopee.report": "Báo cáo đơn/hoa hồng Shopee",
+    "shopee.picks": "Chọn sản phẩm Shopee rẻ, hoa hồng cao theo danh sách từ khoá",
     "tiktok.trending": "Video TikTok đang hot",
     "tiktok.products": "Sản phẩm + hoa hồng TikTok Shop",
     "tiktok.report": "Báo cáo đơn/hoa hồng TikTok",

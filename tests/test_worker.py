@@ -1,7 +1,10 @@
 from datetime import timedelta
+from decimal import Decimal
+
+from sqlalchemy import select
 
 from affiliate_data import crypto, jobs, tasks, worker
-from affiliate_data.models import Job, PlatformSession, Watch
+from affiliate_data.models import Job, PlatformSession, Product, Watch
 from affiliate_data.scrapers.browser import Blocked
 
 
@@ -80,3 +83,50 @@ def test_interrupted_jobs_are_failed_on_start(db):
     worker.fail_interrupted()
     db.expire_all()
     assert db.get(Job, job.id).status == "failed"
+
+
+GOOD_SHOP = {"shop_type": "mall", "rating": 4.9, "sold": 500}
+# keyword -> (id, price, commission rate, affiliate link from the offers page)
+OFFERS = {
+    "nồi": [(19, 50_000, 0.20, "https://s.shopee.vn/old"), (11, 100_000, 0.10, None), (12, 300_000, 0.02, None)],
+    "máy xay": [(21, 100_000, 0.10, None), (22, 200_000, 0.05, None), (23, 300_000, 0.01, None)],
+    "quạt": [],
+}
+
+
+def test_picks_job_searches_each_keyword_and_links_only_the_picks(db, monkeypatch):
+    def offers(page, keyword, pages, captures):
+        return [
+            {
+                "external_id": str(n),
+                "name": f"{keyword} {n}",
+                "url": f"https://shopee.vn/product/1/{n}",
+                "price": Decimal(price),
+                "commission_rate": rate,
+                "affiliate_link": link,
+                "keyword": keyword,
+                **GOOD_SHOP,
+            }
+            for n, price, rate, link in OFFERS[keyword]
+        ]
+
+    asked = []
+
+    def make_links(page, urls, captures):
+        asked.extend(urls)
+        # The tool answers for all but the last URL.
+        return {url: url.replace("shopee.vn/product/1/", "s.shopee.vn/") for url in urls[:-1]}
+
+    monkeypatch.setattr(tasks.shopee, "offers", offers)
+    monkeypatch.setattr(tasks.shopee, "make_links", make_links)
+    params = jobs.validate("shopee.picks", {"keywords": ["nồi", "máy xay", "quạt"], "top": 2})
+
+    result = tasks.HANDLERS["shopee.picks"](db, None, params, [])
+
+    assert result == {"products": 6, "picked": 4, "links": 2, "without_link": 1, "no_pick": ["quạt"]}
+    # The picks are 19, 11 and 21, 22; 19 already had a link, so only three go to the tool.
+    assert asked == [f"https://shopee.vn/product/1/{n}" for n in (11, 21, 22)]
+    linked = dict(
+        db.execute(select(Product.external_id, Product.affiliate_link).where(Product.affiliate_link.is_not(None))).all()
+    )
+    assert linked == {"19": "https://s.shopee.vn/old", "11": "https://s.shopee.vn/11", "21": "https://s.shopee.vn/21"}

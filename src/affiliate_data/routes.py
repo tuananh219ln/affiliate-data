@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Date, cast, desc, func, nulls_last, select
 from sqlalchemy.orm import Session
 
-from . import config, crypto, jobs
+from . import config, crypto, jobs, ranking
 from .db import get_db
 from .models import PLATFORMS, Conversion, Job, PlatformSession, Product, TrendingVideo, Watch
 
@@ -201,6 +201,42 @@ def list_products(
         query = query.where(Product.affiliate_link.is_not(None) if has_link else Product.affiliate_link.is_(None))
     query = query.order_by(PRODUCT_SORTS[sort], desc(Product.id)).limit(limit).offset(offset)
     return [ProductOut.model_validate(p) for p in db.scalars(query).all()]
+
+
+class PickOut(ProductOut):
+    score: float
+
+
+class KeywordPicks(BaseModel):
+    keyword: str
+    products: list[PickOut]
+
+
+# Before /{product_id}, which would otherwise take "picks" for an id.
+@products.get("/picks")
+def list_picks(
+    keyword: list[str] = Query(description="Lặp lại cho nhiều từ khoá: keyword=nồi chiên&keyword=máy xay"),
+    top: int = Query(3, ge=1, le=20),
+    price_weight: float = Query(0.5, ge=0, le=1, description="1 = chỉ xét giá rẻ, 0 = chỉ xét hoa hồng cao"),
+    approved_only: bool = Query(True, description="Chỉ shop Mall/Yêu thích, từ 4.7 sao, từ 100 lượt bán"),
+    min_price: int | None = Query(None, ge=0),
+    max_price: int | None = Query(None, ge=0),
+    db: Session = Depends(get_db),
+) -> list[KeywordPicks]:
+    """The best Shopee products already saved for each keyword (run a `shopee.picks` job to find them)."""
+    keywords = list(dict.fromkeys(k.strip() for k in keyword if k.strip()))
+    if not keywords or len(keywords) > 20:
+        raise HTTPException(status_code=422, detail="Cần từ 1 đến 20 từ khoá.")
+    out = []
+    for kw in keywords:
+        ranked = ranking.picks(db, kw, top, price_weight, approved_only, min_price, max_price)
+        out.append(
+            KeywordPicks(
+                keyword=kw,
+                products=[PickOut(**ProductOut.model_validate(p).model_dump(), score=score) for p, score in ranked],
+            )
+        )
+    return out
 
 
 @products.get("/{product_id}")

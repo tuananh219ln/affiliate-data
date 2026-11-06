@@ -8,7 +8,7 @@ from playwright.sync_api import Page
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import config, crypto, store
+from . import config, crypto, ranking, store
 from .jobs import platform_of
 from .models import Job, PlatformSession, Product
 from .scrapers import shopee, tiktok
@@ -40,6 +40,14 @@ def _shopee_links(db: Session, page: Page, p: dict[str, Any], caps: list[Capture
     ).all()
     if not products:
         raise TaskError("Không có sản phẩm Shopee nào (có link) trong danh sách đã chọn.")
+    made = _attach_links(db, page, list(products), caps)
+    if made == 0:
+        raise TaskError("Không đọc được link affiliate nào từ trang tạo link. Thử lại với dump=true để xem phản hồi.")
+    return {"links": made, "missing": len(products) - made}
+
+
+def _attach_links(db: Session, page: Page, products: list[Product], caps: list[Capture]) -> int:
+    """Makes affiliate links for `products` (each with a url) and saves them; returns how many were made."""
     links = shopee.make_links(page, [product.url for product in products if product.url], caps)
     made = 0
     for product in products:
@@ -48,9 +56,26 @@ def _shopee_links(db: Session, page: Page, p: dict[str, Any], caps: list[Capture
             product.affiliate_link = link
             made += 1
     db.commit()
-    if made == 0:
-        raise TaskError("Không đọc được link affiliate nào từ trang tạo link. Thử lại với dump=true để xem phản hồi.")
-    return {"links": made, "missing": len(products) - made}
+    return made
+
+
+def _shopee_picks(db: Session, page: Page, p: dict[str, Any], caps: list[Capture]) -> dict[str, Any]:
+    saved = 0
+    for keyword in p["keywords"]:
+        saved += store.save_products(db, "shopee", shopee.offers(page, keyword, p["pages"], caps))
+    options = {k: p[k] for k in ("top", "price_weight", "approved_only", "min_price", "max_price")}
+    chosen = {keyword: ranking.picks(db, keyword, **options) for keyword in p["keywords"]}
+    picked = [product for pairs in chosen.values() for product, _ in pairs]
+    # The offers page often gives a link already; only the rest go through the custom-link tool.
+    unlinked = [product for product in picked if product.affiliate_link is None and product.url]
+    links = _attach_links(db, page, unlinked, caps) if unlinked else 0
+    return {
+        "products": saved,
+        "picked": len(picked),
+        "links": links,
+        "without_link": sum(1 for product in picked if product.affiliate_link is None),
+        "no_pick": [keyword for keyword, pairs in chosen.items() if not pairs],
+    }
 
 
 def _shopee_report(db: Session, page: Page, p: dict[str, Any], caps: list[Capture]) -> dict[str, Any]:
@@ -76,6 +101,7 @@ HANDLERS: dict[str, Handler] = {
     "shopee.offers": _shopee_offers,
     "shopee.links": _shopee_links,
     "shopee.report": _shopee_report,
+    "shopee.picks": _shopee_picks,
     "tiktok.trending": _tiktok_trending,
     "tiktok.products": _tiktok_products,
     "tiktok.report": _tiktok_report,
