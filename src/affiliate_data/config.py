@@ -15,6 +15,8 @@ DATA_DIR = Path(_env("DATA_DIR", "data"))
 SCRAPE_DELAY_SECONDS = float(_env("SCRAPE_DELAY_SECONDS", "5"))
 MAX_PAGES = int(_env("MAX_PAGES", "5"))
 HEADLESS = _env("HEADLESS", "1") != "0"
+# The web sign-in cookie goes over HTTPS only. Browsers still accept it on http://localhost.
+COOKIE_SECURE = _env("COOKIE_SECURE", "1") != "0"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
 
 SHOPEE_BASE = _env("SHOPEE_BASE_URL", "https://shopee.vn").rstrip("/")

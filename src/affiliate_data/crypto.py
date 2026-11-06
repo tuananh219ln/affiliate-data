@@ -1,4 +1,4 @@
-"""Encrypts saved login sessions (browser cookies) at rest. They are never sent back by the API."""
+"""Encrypts saved login sessions (browser cookies) at rest, and the web sign-in cookie."""
 
 from cryptography.fernet import Fernet
 
@@ -19,5 +19,6 @@ def encrypt(secret: str) -> str:
     return _fernet().encrypt(secret.encode()).decode()
 
 
-def decrypt(encrypted: str) -> str:
-    return _fernet().decrypt(encrypted.encode()).decode()
+def decrypt(encrypted: str, ttl: int | None = None) -> str:
+    """Raises InvalidToken when the token was changed, made with another key, or is older than `ttl` s."""
+    return _fernet().decrypt(encrypted.encode(), ttl=ttl).decode()

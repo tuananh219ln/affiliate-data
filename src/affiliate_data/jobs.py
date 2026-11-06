@@ -100,12 +100,12 @@ def same_job_open(db: Session, kind: str, params: dict[str, Any]) -> Job | None:
     ).first()
 
 
-def enqueue(db: Session, kind: str, params: dict[str, Any]) -> Job:
+def enqueue(db: Session, kind: str, params: dict[str, Any], created_by: int | None = None) -> Job:
     params = validate(kind, params)
     existing = same_job_open(db, kind, params)
     if existing is not None:
         return existing
-    job = Job(kind=kind, params=params, status="queued")
+    job = Job(kind=kind, params=params, status="queued", created_by=created_by)
     db.add(job)
     db.commit()
     return job

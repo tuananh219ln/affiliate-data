@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Thành viên{% endblock %}
+{% block content %}
+<h1>Thành viên</h1>
+<div class="table-wrap">
+<table>
+  <tr><th>Tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr>
+  {% for person in people %}
+  <tr>
+    <td>{{ person.name }}</td>
+    <td>{{ person.email }}</td>
+    <td>{{ 'Quản trị' if person.is_admin else 'Thành viên' }}</td>
+    <td class="{{ 's-done' if person.active else 'muted' }}">{{ 'Đang dùng' if person.active else 'Đã tắt' }}</td>
+    <td>
+      {% if person.id != user.id %}
+      <form method="post" action="/members/{{ person.id }}/active">
+        {% if not person.active %}<input type="hidden" name="active" value="true">{% endif %}
+        <button type="submit">{{ 'Tắt' if person.active else 'Bật lại' }}</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+
+<h2>Thêm thành viên</h2>
+<form class="panel" method="post" action="/members" style="max-width: 520px;">
+  <p><label for="name">Tên</label><input id="name" name="name" value="{{ form.name if form else '' }}" required maxlength="100"></p>
+  <p><label for="email">Email</label><input id="email" name="email" type="email" value="{{ form.email if form else '' }}" required maxlength="200"></p>
+  <p><label for="password">Mật khẩu tạm (ít nhất 10 ký tự, gửi riêng cho họ và nhắc đổi)</label><input id="password" name="password" type="password" required minlength="10" autocomplete="new-password"></p>
+  <p><label class="row" style="color: var(--text);"><input type="checkbox" name="is_admin" value="true"> Quản trị (thêm, tắt thành viên)</label></p>
+  <button class="primary" type="submit">Thêm</button>
+</form>
+{% endblock %}
