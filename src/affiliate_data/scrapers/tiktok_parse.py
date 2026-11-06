@@ -54,6 +54,7 @@ def products(responses: list[Any], keyword: str | None = None) -> list[dict[str,
             {
                 "external_id": str(product_id),
                 "shop_id": text(pick(d, "shop_id", "shopId", "seller_id", "shop.shop_id")),
+                "shop_name": text(pick(d, "shop_name", "shopName", "seller_name", "shop.shop_name", "shop.name")),
                 "name": text(name),
                 "price": to_decimal(_money(pick(d, "price", "sale_price", "min_price", "price_info.sale_price"))),
                 "original_price": to_decimal(_money(pick(d, "original_price", "origin_price"))),

@@ -18,6 +18,7 @@ from .models import PLATFORMS, Conversion, Job, PlatformSession, Product, Trendi
 VN = ZoneInfo(config.TIME_ZONE)
 
 Platform = Literal["shopee", "tiktok"]
+ShopType = Literal["mall", "preferred_plus", "preferred", "other"]
 
 
 def _not_found(what: str) -> HTTPException:
@@ -142,6 +143,8 @@ class ProductOut(BaseModel):
     platform: str
     external_id: str
     name: str
+    shop_name: str | None
+    shop_type: str | None
     price: Decimal | None
     original_price: Decimal | None
     image_url: str | None
@@ -171,6 +174,11 @@ def list_products(
     q: str | None = Query(None, max_length=100),
     min_commission: float | None = Query(None, ge=0, le=1, description="Tỉ lệ tối thiểu, 0.1 = 10 %"),
     has_link: bool | None = None,
+    shop_type: list[ShopType] | None = Query(
+        None, description="Lặp lại để lấy nhiều loại: shop_type=mall&shop_type=preferred"
+    ),
+    min_rating: float | None = Query(None, ge=0, le=5),
+    min_sold: int | None = Query(None, ge=0),
     sort: Literal["sold", "commission", "commission_amount", "updated"] = "updated",
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -183,6 +191,12 @@ def list_products(
         query = query.where(Product.name.ilike(f"%{q}%"))
     if min_commission is not None:
         query = query.where(Product.commission_rate >= min_commission)
+    if shop_type:
+        query = query.where(Product.shop_type.in_(shop_type))
+    if min_rating is not None:
+        query = query.where(Product.rating >= min_rating)
+    if min_sold is not None:
+        query = query.where(Product.sold >= min_sold)
     if has_link is not None:
         query = query.where(Product.affiliate_link.is_not(None) if has_link else Product.affiliate_link.is_(None))
     query = query.order_by(PRODUCT_SORTS[sort], desc(Product.id)).limit(limit).offset(offset)

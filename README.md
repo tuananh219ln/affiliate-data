@@ -72,7 +72,14 @@ visible browser) and upload the session:
 curl -X POST localhost:8000/api/jobs -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
   -d '{"kind": "shopee.offers", "params": {"keyword": "nồi chiên", "pages": 2}}'
 curl "localhost:8000/api/products?platform=shopee&sort=commission&min_commission=0.1" -H "X-API-Key: $API_KEY"
+# Only products Reels Studio would approve: trusted shop, 4.7 stars or more, 100 sales or more.
+curl "localhost:8000/api/products?shop_type=mall&shop_type=preferred_plus&shop_type=preferred&min_rating=4.7&min_sold=100" \
+  -H "X-API-Key: $API_KEY"
 ```
+
+Shopee products carry `shop_name` and `shop_type` (`mall`, `preferred_plus`, `preferred`,
+`other`: the values Reels Studio uses), read from the shop's badge flags. `shop_type` is empty
+when a page did not say; a later save never turns a known type back into empty.
 
 ## Commands
 

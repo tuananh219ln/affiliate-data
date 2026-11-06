@@ -63,6 +63,9 @@ SHOPEE_SEARCH = {
                 "image": "vn-abc",
                 "historical_sold": 1520,
                 "item_rating": {"rating_star": 4.8},
+                "shop_name": "Coolmate Official",
+                "is_official_shop": True,
+                "shopee_verified": True,
             },
         }
     ]
@@ -80,6 +83,25 @@ def test_shopee_search_reads_items_and_unscales_prices():
     assert row["url"].endswith("/product/222/111")
     assert row["image_url"].endswith("/vn-abc")
     assert row["keyword"] == "áo thun"
+    assert (row["shop_name"], row["shop_type"]) == ("Coolmate Official", "mall")
+
+
+@pytest.mark.parametrize(
+    ("record", "expected"),
+    [
+        ({"is_official_shop": True, "shopee_verified": True}, "mall"),
+        ({"is_official_shop": False, "is_preferred_plus_seller": True}, "preferred_plus"),
+        ({"is_official_shop": False, "shopee_verified": True}, "preferred"),
+        ({"isOfficialShop": False, "shopeeVerified": False}, "other"),
+        ({"shopType": "Preferred Plus"}, "preferred_plus"),
+        ({"shopType": "Mall"}, "mall"),
+        # No badge information at all is unknown, not an ordinary shop.
+        ({"name": "x"}, None),
+        ({"shopType": "something new"}, None),
+    ],
+)
+def test_shopee_shop_type(record, expected):
+    assert shopee_parse.shop_type(record) == expected
 
 
 def test_shopee_offers_read_commission_from_camel_or_snake_case():
