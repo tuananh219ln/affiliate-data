@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Việc{% endblock %}
+{% block content %}
+<h1>Việc</h1>
+<p class="muted">Worker chạy từng việc một, chậm có chủ ý. Gặp captcha hoặc trang đòi đăng nhập thì việc dừng và một người phải đăng nhập lại (xem <a href="/sessions">Đăng nhập nền tảng</a>).</p>
+{% if jobs %}
+<div class="table-wrap">
+<table>
+  <tr><th>#</th><th>Lúc</th><th>Việc</th><th>Người chạy</th><th>Trạng thái</th><th>Kết quả</th></tr>
+  {% for job in jobs %}
+  <tr>
+    <td>{% if job.kind.endswith('.picks') %}<a href="/picks/{{ job.id }}">{{ job.id }}</a>{% else %}{{ job.id }}{% endif %}</td>
+    <td>{{ job.created_at | when }}</td>
+    <td>{{ kind_labels.get(job.kind, job.kind) }}{% if job.params.keyword %}: {{ job.params.keyword }}{% elif job.params.keywords %}: {{ job.params.keywords | join(', ') }}{% endif %}</td>
+    <td>{{ members.get(job.created_by, '—') }}</td>
+    <td class="s-{{ job.status }}">{{ status_labels[job.status] }}</td>
+    <td>
+      {% if job.error %}<span class="s-failed">{{ job.error }}</span>
+      {% elif job.result %}<span class="muted">{% for key, value in job.result.items() %}{{ key }}: {{ value | join(', ') if value is iterable and value is not string else value }}{{ ' · ' if not loop.last }}{% endfor %}</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% else %}
+<p class="muted">Chưa có việc nào.</p>
+{% endif %}
+{% endblock %}

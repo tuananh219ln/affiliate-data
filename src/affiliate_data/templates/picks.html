@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Chọn sản phẩm{% endblock %}
+{% block content %}
+<h1>Chọn sản phẩm theo danh sách từ khoá</h1>
+<form class="panel" method="post" action="/picks">
+  <div class="grid">
+    <div>
+      <label for="platform">Nền tảng</label>
+      <select id="platform" name="platform">
+        <option value="shopee" {{ 'selected' if form.platform == 'shopee' }}>Shopee (tạo luôn link aff)</option>
+        <option value="tiktok" {{ 'selected' if form.platform == 'tiktok' }}>TikTok Shop</option>
+      </select>
+    </div>
+    <div>
+      <label for="top">Số sản phẩm mỗi từ khoá</label>
+      <input id="top" name="top" type="number" min="1" max="5" value="{{ form.top }}">
+    </div>
+    <div>
+      <label for="price_weight">Ưu tiên: 1 = giá rẻ, 0 = hoa hồng cao</label>
+      <input id="price_weight" name="price_weight" type="number" min="0" max="1" step="0.1" value="{{ form.price_weight }}">
+    </div>
+    <div>
+      <label for="min_price">Giá từ (₫)</label>
+      <input id="min_price" name="min_price" inputmode="numeric" pattern="[0-9]*" value="{{ form.min_price or '' }}" placeholder="Không giới hạn">
+    </div>
+    <div>
+      <label for="max_price">Giá đến (₫)</label>
+      <input id="max_price" name="max_price" inputmode="numeric" pattern="[0-9]*" value="{{ form.max_price or '' }}" placeholder="Không giới hạn">
+    </div>
+  </div>
+  <p>
+    <label for="keywords">Từ khoá, mỗi dòng một từ (tối đa 10)</label>
+    <textarea id="keywords" name="keywords" required placeholder="nồi chiên không dầu&#10;máy xay sinh tố">{{ form.keywords }}</textarea>
+  </p>
+  <div class="row">
+    <label class="row" style="margin: 0; color: var(--text);">
+      <input type="checkbox" name="approved_only" value="true" {{ 'checked' if form.approved_only }}>
+      Chỉ sản phẩm uy tín (từ 4.7 sao, từ 100 lượt bán; Shopee: shop Mall hoặc Yêu thích)
+    </label>
+  </div>
+  <p><button class="primary" type="submit">Tìm và chọn</button>
+  <span class="muted">Việc chạy chậm có chủ ý (vài giây mỗi trang) để không bị khoá tài khoản.</span></p>
+</form>
+
+<h2>Các lượt gần đây</h2>
+{% if recent %}
+<div class="table-wrap">
+<table>
+  <tr><th>Lúc</th><th>Nền tảng</th><th>Từ khoá</th><th>Người chạy</th><th>Trạng thái</th></tr>
+  {% for job in recent %}
+  <tr>
+    <td><a href="/picks/{{ job.id }}">{{ job.created_at | when }}</a></td>
+    <td>{{ 'Shopee' if job.kind == 'shopee.picks' else 'TikTok' }}</td>
+    <td><a href="/picks/{{ job.id }}">{{ job.params.keywords | join(', ') }}</a></td>
+    <td>{{ members.get(job.created_by, '—') }}</td>
+    <td class="s-{{ job.status }}">{{ status_labels[job.status] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% else %}
+<p class="muted">Chưa có lượt nào.</p>
+{% endif %}
+{% endblock %}

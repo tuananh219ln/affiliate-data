@@ -1,6 +1,7 @@
-"""python -m affiliate_data <api|worker|migrate|login>."""
+"""python -m affiliate_data <api|worker|migrate|login|create-user>."""
 
 import argparse
+import getpass
 import json
 import urllib.request
 from pathlib import Path
@@ -38,6 +39,22 @@ def login(platform: str, out: Path, upload: str | None, api_key: str | None) -> 
             print(f"Đã tải phiên lên: HTTP {response.status}")
 
 
+def create_user(email: str, name: str, is_admin: bool) -> None:
+    """Adds a member from the command line; the first admin is made this way, the rest on /members."""
+    from . import accounts
+    from .db import SessionLocal
+
+    password = getpass.getpass("Mật khẩu: ")
+    if password != getpass.getpass("Nhập lại mật khẩu: "):
+        raise SystemExit("Hai lần nhập không khớp.")
+    with SessionLocal() as db:
+        try:
+            user = accounts.create(db, email, name or email, password, is_admin)
+        except accounts.AccountError as error:
+            raise SystemExit(str(error)) from error
+    print(f"Đã tạo {'quản trị viên' if is_admin else 'thành viên'} {user.email}.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="affiliate_data")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -54,6 +71,11 @@ def main() -> None:
     login_cmd.add_argument("--out", type=Path, help="where to save the session (default <platform>-session.json)")
     login_cmd.add_argument("--upload", help="API base URL to upload the session to, e.g. http://localhost:8000")
     login_cmd.add_argument("--api-key", help="the API's X-API-Key, for --upload")
+
+    user_cmd = commands.add_parser("create-user", help="add a member who can sign in to the web pages")
+    user_cmd.add_argument("email")
+    user_cmd.add_argument("--name", default="")
+    user_cmd.add_argument("--admin", action="store_true", help="may add and turn off members")
 
     args = parser.parse_args()
     if args.command == "api":
@@ -72,3 +94,5 @@ def main() -> None:
         command.upgrade(Config("alembic.ini"), "head")
     elif args.command == "login":
         login(args.platform, args.out or Path(f"{args.platform}-session.json"), args.upload, args.api_key)
+    elif args.command == "create-user":
+        create_user(args.email, args.name, args.admin)

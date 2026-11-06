@@ -1,7 +1,7 @@
 # Affiliate Data
 
-A small service that collects Shopee and TikTok data for affiliate work and serves it over an
-HTTP API, so tools such as Reels Studio can pick products to make videos about.
+A small service that collects Shopee and TikTok data for affiliate work, with web pages for the
+team and an HTTP API for other tools. See [docs/PLAN.md](docs/PLAN.md) for where it is going.
 
 What it collects:
 
@@ -16,6 +16,28 @@ What it collects:
 | `tiktok.products` | TikTok Shop affiliate marketplace products, with commission rate | TikTok Shop creator |
 | `tiktok.report` | Affiliate orders and commission | TikTok Shop creator |
 | `tiktok.picks` | Like `shopee.picks` on the TikTok Shop marketplace, without links | TikTok Shop creator |
+
+## Web pages
+
+Members sign in at `/login` (the first admin is made on the command line, the rest on
+`/members`):
+
+```bash
+.venv/Scripts/python -m affiliate_data create-user you@example.com --name "Your name" --admin
+```
+
+| Page | What it is for |
+| --- | --- |
+| `/picks` | Type keywords, run a picks job, see each keyword's best products and copy their links |
+| `/jobs` | Every job, who started it, and its result or error |
+| `/revenue` | Orders and commission per day, last 30 days |
+| `/sessions` | Whether each platform's login still works, and how to log in again |
+| `/members` | Admins add members and turn them off |
+| `/account` | Change your password (signs you out on other devices) |
+
+Passwords are hashed with scrypt. The sign-in cookie is encrypted with `SECRET_KEY`, lasts 14
+days, is HttpOnly, SameSite=Lax and (unless `COOKIE_SECURE=0`) HTTPS-only; forms posted from
+another site are refused. The JSON API keeps using `X-API-Key`.
 
 ## How it works
 
@@ -104,8 +126,6 @@ Shopee products carry `shop_name` and `shop_type` (`mall`, `preferred_plus`, `pr
 `other`: the values Reels Studio uses), read from the shop's badge flags. `shop_type` is empty
 when a page did not say; a later save never turns a known type back into empty.
 
-See [docs/PLAN.md](docs/PLAN.md) for where this service fits in the whole affiliate workflow.
-
 ## Commands
 
 | What | Command |
@@ -125,6 +145,7 @@ See [docs/PLAN.md](docs/PLAN.md) for where this service fits in the whole affili
 | `SCRAPE_DELAY_SECONDS` | Wait between page loads (default 5) |
 | `MAX_PAGES` | Most pages one search job may load (default 5) |
 | `HEADLESS` | `0` shows the browser window |
+| `COOKIE_SECURE` | `0` lets the sign-in cookie go over plain http (only for a server reached without HTTPS) |
 | `SHOPEE_BASE_URL`, `SHOPEE_AFFILIATE_BASE_URL`, `TIKTOK_BASE_URL`, `TIKTOK_AFFILIATE_BASE_URL` | Site base URLs |
 | `PATH_<NAME>` | Overrides a page path from `config.py` |
 

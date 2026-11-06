@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Doanh thu{% endblock %}
+{% block content %}
+<h1>Doanh thu 30 ngày</h1>
+<div class="grid" style="margin-bottom: 16px;">
+  {% for platform, total in totals.items() %}
+  <div class="panel">
+    <div class="muted">{{ 'Shopee' if platform == 'shopee' else 'TikTok Shop' }}</div>
+    <div style="font-size: 24px; font-weight: 700;">{{ total.commission | money }}</div>
+    <div class="muted">{{ total.orders }} đơn</div>
+  </div>
+  {% endfor %}
+</div>
+<p class="muted">Lấy từ báo cáo của từng nền tảng (việc "Báo cáo đơn/hoa hồng"). Đặt lịch chạy hằng ngày để giữ đủ lịch sử.</p>
+{% if days %}
+<div class="table-wrap">
+<table>
+  <tr><th>Ngày</th><th>Nền tảng</th><th class="num">Đơn</th><th class="num">Giá trị đơn</th><th class="num">Hoa hồng</th></tr>
+  {% for d in days %}
+  <tr>
+    <td>{{ d.day }}</td>
+    <td>{{ 'Shopee' if d.platform == 'shopee' else 'TikTok Shop' }}</td>
+    <td class="num">{{ d.orders }}</td>
+    <td class="num">{{ d.order_amount | money }}</td>
+    <td class="num">{{ d.commission | money }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% else %}
+<p class="muted">Chưa có đơn nào trong 30 ngày.</p>
+{% endif %}
+{% endblock %}

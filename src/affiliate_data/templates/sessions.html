@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập nền tảng{% endblock %}
+{% block content %}
+<h1>Đăng nhập nền tảng</h1>
+{% set labels = {'ok': 'Đang dùng được', 'needs_login': 'Cần đăng nhập lại', 'blocked': 'Bị chặn (captcha)', 'missing': 'Chưa đăng nhập'} %}
+<div class="table-wrap">
+<table>
+  <tr><th>Nền tảng</th><th>Trạng thái</th><th>Ghi chú</th><th>Cập nhật</th></tr>
+  {% for s in sessions %}
+  <tr>
+    <td>{{ 'Shopee' if s.platform == 'shopee' else 'TikTok' }}</td>
+    <td class="{{ 's-done' if s.status == 'ok' else 's-failed' }}">{{ labels.get(s.status, s.status) }}</td>
+    <td>{{ s.message or '' }}</td>
+    <td>{{ s.updated_at | when }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+<h2>Đăng nhập lại</h2>
+<p>Một người đăng nhập bằng tay trên máy của mình (captcha, OTP tự làm), rồi tải phiên lên:</p>
+<pre class="panel" style="overflow-x: auto;">python -m affiliate_data login shopee --upload {{ request.base_url }} --api-key &lt;API_KEY&gt;</pre>
+<p class="muted">Phiên đăng nhập được mã hoá và không bao giờ hiển thị lại. Hệ thống không tự vượt captcha.</p>
+{% endblock %}
