@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from .models import Product
 
 # Reels Studio approves a product only from these shops, with this rating and these sales.
+# TikTok Shop has no shop badges, so there only the rating and the sales count.
 APPROVED_SHOP_TYPES = ("mall", "preferred_plus", "preferred")
 APPROVED_MIN_RATING = 4.7
 APPROVED_MIN_SOLD = 100
@@ -45,24 +46,23 @@ def rank(products: Sequence[Product], top: int, price_weight: float = 0.5) -> li
 
 def candidates(
     db: Session,
+    platform: str,
     keyword: str,
     approved_only: bool = True,
     min_price: Decimal | int | None = None,
     max_price: Decimal | int | None = None,
 ) -> list[Product]:
-    """Saved Shopee products found for `keyword` that carry a price and a commission rate."""
+    """Saved products of `platform` found for `keyword` that carry a price and a commission rate."""
     query = select(Product).where(
-        Product.platform == "shopee",
+        Product.platform == platform,
         Product.keyword == keyword,
         Product.price.is_not(None),
         Product.commission_rate.is_not(None),
     )
     if approved_only:
-        query = query.where(
-            Product.shop_type.in_(APPROVED_SHOP_TYPES),
-            Product.rating >= APPROVED_MIN_RATING,
-            Product.sold >= APPROVED_MIN_SOLD,
-        )
+        query = query.where(Product.rating >= APPROVED_MIN_RATING, Product.sold >= APPROVED_MIN_SOLD)
+        if platform == "shopee":
+            query = query.where(Product.shop_type.in_(APPROVED_SHOP_TYPES))
     if min_price is not None:
         query = query.where(Product.price >= min_price)
     if max_price is not None:
@@ -72,6 +72,7 @@ def candidates(
 
 def picks(
     db: Session,
+    platform: str,
     keyword: str,
     top: int,
     price_weight: float = 0.5,
@@ -79,4 +80,4 @@ def picks(
     min_price: Decimal | int | None = None,
     max_price: Decimal | int | None = None,
 ) -> list[tuple[Product, float]]:
-    return rank(candidates(db, keyword, approved_only, min_price, max_price), top, price_weight)
+    return rank(candidates(db, platform, keyword, approved_only, min_price, max_price), top, price_weight)

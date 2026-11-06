@@ -211,3 +211,24 @@ def test_picks_job_params_are_cleaned(client):
     }
     for bad in ({"keywords": []}, {"keywords": [""]}, {"keywords": ["a"] * 11}, {"keywords": ["a"], "top": 6}):
         assert client.post("/api/jobs", json={"kind": "shopee.picks", "params": bad}).status_code == 422
+
+
+def test_tiktok_picks_skip_the_shop_rule_and_stay_on_their_platform(client, db):
+    store.save_products(db, "shopee", [_offer(1, "son", 10_000, 0.5)])
+    store.save_products(
+        db,
+        "tiktok",
+        [
+            _offer(1, "son", 100_000, 0.10, shop_type=None),
+            _offer(2, "son", 80_000, 0.12, shop_type=None, sold=20),
+            _offer(3, "son", 90_000, 0.08, shop_type=None, rating=4.0),
+        ],
+    )
+
+    [son] = client.get("/api/products/picks", params={"platform": "tiktok", "keyword": "son"}).json()
+    assert [(p["platform"], p["external_id"]) for p in son["products"]] == [("tiktok", "1")]
+
+    params = {"platform": "tiktok", "keyword": "son", "approved_only": False}
+    [son] = client.get("/api/products/picks", params=params).json()
+    assert [p["external_id"] for p in son["products"]] == ["2", "1", "3"]
+    assert client.get("/api/products/picks", params={"platform": "lazada", "keyword": "son"}).status_code == 422

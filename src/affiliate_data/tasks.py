@@ -59,13 +59,27 @@ def _attach_links(db: Session, page: Page, products: list[Product], caps: list[C
     return made
 
 
-def _shopee_picks(db: Session, page: Page, p: dict[str, Any], caps: list[Capture]) -> dict[str, Any]:
+Search = Callable[[Page, str, int, list[Capture]], list[dict[str, Any]]]
+
+
+def _pick(
+    db: Session, page: Page, p: dict[str, Any], caps: list[Capture], platform: str, search: Search
+) -> tuple[int, dict[str, list[Product]]]:
+    """Searches every keyword, saves what it finds, and returns the count saved and each keyword's picks."""
     saved = 0
     for keyword in p["keywords"]:
-        saved += store.save_products(db, "shopee", shopee.offers(page, keyword, p["pages"], caps))
+        saved += store.save_products(db, platform, search(page, keyword, p["pages"], caps))
     options = {k: p[k] for k in ("top", "price_weight", "approved_only", "min_price", "max_price")}
-    chosen = {keyword: ranking.picks(db, keyword, **options) for keyword in p["keywords"]}
-    picked = [product for pairs in chosen.values() for product, _ in pairs]
+    chosen = {
+        keyword: [product for product, _ in ranking.picks(db, platform, keyword, **options)]
+        for keyword in p["keywords"]
+    }
+    return saved, chosen
+
+
+def _shopee_picks(db: Session, page: Page, p: dict[str, Any], caps: list[Capture]) -> dict[str, Any]:
+    saved, chosen = _pick(db, page, p, caps, "shopee", shopee.offers)
+    picked = [product for products in chosen.values() for product in products]
     # The offers page often gives a link already; only the rest go through the custom-link tool.
     unlinked = [product for product in picked if product.affiliate_link is None and product.url]
     links = _attach_links(db, page, unlinked, caps) if unlinked else 0
@@ -74,7 +88,17 @@ def _shopee_picks(db: Session, page: Page, p: dict[str, Any], caps: list[Capture
         "picked": len(picked),
         "links": links,
         "without_link": sum(1 for product in picked if product.affiliate_link is None),
-        "no_pick": [keyword for keyword, pairs in chosen.items() if not pairs],
+        "no_pick": [keyword for keyword, products in chosen.items() if not products],
+    }
+
+
+def _tiktok_picks(db: Session, page: Page, p: dict[str, Any], caps: list[Capture]) -> dict[str, Any]:
+    """TikTok affiliate links are made in the app's showcase, so this only picks."""
+    saved, chosen = _pick(db, page, p, caps, "tiktok", tiktok.products)
+    return {
+        "products": saved,
+        "picked": sum(len(products) for products in chosen.values()),
+        "no_pick": [keyword for keyword, products in chosen.items() if not products],
     }
 
 
@@ -105,6 +129,7 @@ HANDLERS: dict[str, Handler] = {
     "tiktok.trending": _tiktok_trending,
     "tiktok.products": _tiktok_products,
     "tiktok.report": _tiktok_report,
+    "tiktok.picks": _tiktok_picks,
 }
 
 

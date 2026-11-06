@@ -30,7 +30,7 @@ Keyword = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, 
 
 
 class PickParams(BaseModel):
-    """Search offers for each keyword, keep the best `top` of each, and make their affiliate links."""
+    """Search offers for each keyword and keep the best `top` of each (on Shopee, with affiliate links)."""
 
     # At most 10 x 5 = 50 links, what one custom-link job takes.
     keywords: list[Keyword] = Field(min_length=1, max_length=10)
@@ -38,7 +38,7 @@ class PickParams(BaseModel):
     top: int = Field(default=3, ge=1, le=5)
     # 1 ranks by price only, 0 by commission rate only.
     price_weight: float = Field(default=0.5, ge=0, le=1)
-    # Only products Reels Studio would approve: trusted shop, 4.7 stars or more, 100 sales or more.
+    # Only products Reels Studio would approve: 4.7 stars or more, 100 sales or more, and on Shopee a trusted shop.
     approved_only: bool = True
     min_price: int | None = Field(default=None, ge=0)
     max_price: int | None = Field(default=None, ge=0)
@@ -59,6 +59,7 @@ KINDS: dict[str, type[BaseModel]] = {
     "tiktok.trending": KeywordParams,
     "tiktok.products": KeywordParams,
     "tiktok.report": ReportParams,
+    "tiktok.picks": PickParams,
 }
 
 KIND_LABELS = {
@@ -70,6 +71,7 @@ KIND_LABELS = {
     "tiktok.trending": "Video TikTok đang hot",
     "tiktok.products": "Sản phẩm + hoa hồng TikTok Shop",
     "tiktok.report": "Báo cáo đơn/hoa hồng TikTok",
+    "tiktok.picks": "Chọn sản phẩm TikTok Shop rẻ, hoa hồng cao theo danh sách từ khoá",
 }
 
 
